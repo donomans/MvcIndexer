@@ -1,0 +1,30 @@
+﻿Main pieces:
+Indexable Attribute - keeps track of keywords and priority
+Querier - interface to mvc app to query the index
+Indexer - indexes the site
+IndexCache - Structure that holds all the indexed data and can serialize it to a file
+
+
+
+Attribute takes information (Keywords, Priority, Path, etc.)
+	- may be able to log (into indexcache) how often the page is hit (to eventually add a real time priority adjustment?)
+
+"Memcache" type structure to hold indexed data
+	Query for each word in the query text (in the hash table) and then collate the results based on amount of matches
+	and priority (all word matches - in close proximity - would be above priority 100, otherwise 
+
+add some way to give a config file for matching up with the Indexable attributes 
+(instead of providing that in code, some other department could based on urls)
+	- other config options: how often to index - continuous or timed?
+
+give indexer the ability to take some anon functions as filters on the html
+	- also have setting for filtering out the master layout page content by default 
+		(find the similar content between pages and filter it out automatically)
+		-- "map reduce" this at night?
+
+
+what to do about urls with IDs (like announcements and resolutions) - how to prioritize them?  
+	- Use base path's priority/keywords
+	- Use list from a file
+
+	file would contain urls that are not [Indexable]'d and Urls that are, but more information needs to be provided
