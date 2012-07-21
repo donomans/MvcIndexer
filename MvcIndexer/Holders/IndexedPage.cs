@@ -14,7 +14,7 @@ namespace MvcIndexer.Holders
 
         public String PureContent = "";
 
-        public String[] Links = null;
+        public Links Links = null;
 
         public IndexedPage(String Html)
         {
