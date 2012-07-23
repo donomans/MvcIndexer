@@ -140,7 +140,9 @@ namespace MvcIndexer.Holders
     }
     public class CrawlInfo
     {
-        public int TryCount;
+
+
+        public Int32 TryCount;
         public Boolean Crawled;
         public Boolean GiveUp;
         public Boolean Exception = false;
@@ -191,59 +193,7 @@ namespace MvcIndexer.Holders
         /// <returns>A fixed url that is fit to be fetched.</returns>
         public static string FixPath(string originatingUrl, string link)
         {
-            Uri uri = new Uri(new Uri(originatingUrl), link);
-            return uri.AbsoluteUri;
-        }
-
-        /// <summary>
-        /// Needed a method to turn a relative path into an absolute path.
-        /// </summary>
-        /// <param name="relativeUrl">The relative url.</param>
-        /// <param name="originatingUrl">The url that contained the relative url.</param>
-        /// <returns>A url that was relative but is now absolute.</returns>
-        private static string ResolveRelativePaths(string relativeUrl, string originatingUrl)
-        {
-            string resolvedUrl = String.Empty;
-
-            string[] relativeUrlArray = relativeUrl.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
-            string[] originatingUrlElements = originatingUrl.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
-            int indexOfFirstNonRelativePathElement = 0;
-            for (int i = 0; i <= relativeUrlArray.Length - 1; i++)
-            {
-                if (relativeUrlArray[i] != "..")
-                {
-                    indexOfFirstNonRelativePathElement = i;
-                    break;
-                }
-            }
-
-            int countOfOriginatingUrlElementsToUse;
-            if (indexOfFirstNonRelativePathElement + 1 >= originatingUrlElements.Length)
-                countOfOriginatingUrlElementsToUse = 2;
-            else
-                countOfOriginatingUrlElementsToUse = originatingUrlElements.Length - indexOfFirstNonRelativePathElement - 1;
-
-            for (int i = 0; i <= countOfOriginatingUrlElementsToUse; i++)
-            {
-                if (originatingUrlElements[i] == "http:" || originatingUrlElements[i] == "https:")
-                    resolvedUrl += originatingUrlElements[i] + "//";
-                else
-                    resolvedUrl += originatingUrlElements[i] + "/";
-            }
-
-            for (int i = 0; i <= relativeUrlArray.Length - 1; i++)
-            {
-                if (i >= indexOfFirstNonRelativePathElement)
-                {
-                    resolvedUrl += relativeUrlArray[i];
-
-                    if (i < relativeUrlArray.Length - 1)
-                        resolvedUrl += "/";
-                }
-            }
-
-            return resolvedUrl;
-        }
-
+            return new Uri(new Uri(originatingUrl), link).AbsoluteUri;
+        }      
     }
 }

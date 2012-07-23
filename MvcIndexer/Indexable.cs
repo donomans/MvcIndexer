@@ -44,7 +44,6 @@ namespace MvcIndexer
         /// </summary>
         public Int32 Priority { get; set; }
 
-
         protected internal static IndexUrls GetIndexable()
         {
             List<MethodInfo> mi = new List<MethodInfo>(GetAllIndexableMethods());

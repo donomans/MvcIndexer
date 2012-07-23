@@ -74,8 +74,30 @@ namespace MvcIndexer
 
     internal class Index
     {
-        public static IndexedPage[] Crawl(String seed)
+        private static String host;
+
+        public static IndexedPage[] Crawl(String SeedUrl, String Host)
         {
+            host = Host;
+            ///0) split off a thread
+            ///1) Get HTML of seed
+            ///     - put in _content
+            ///2) Parse Urls
+            ///     - toss out urls if UrlDiscovery is false
+            ///3) Run Filters if present
+            ///     - put in PureContent
+            ///4) if crawl type is continuous slowly churn through them based on some 
+            /// arbitrary limit based on a page every 3 seconds or something.
+            /// if crawl type is scheduled, do a threadpool and burn through them
+            ///5) if automaster is true then try to toss the common elements found
+            /// -- might be able to find based on css class or ids ?
+            return null;
+        }
+        public static IndexedPage[] Crawl(String SeedUrl)
+        {
+            Uri seed = new Uri(SeedUrl);
+            host = seed.Host;
+            ///0) split off a thread
             ///1) Get HTML of seed
             ///     - put in _content
             ///2) Parse Urls
@@ -93,10 +115,12 @@ namespace MvcIndexer
 
         private void CrawlPages(String SeedUrl)
         {
+         
+            
             string htmlText = "";
             try
             {
-                htmlText = GetWebText(ref SeedUrl, false);
+                htmlText = GetHtml(SeedUrl);// GetWebText(ref SeedUrl, false);
                 LinksToCrawl.Links[SeedUrl] = new CrawlInfo(1, true, SeedUrl, SeedUrl);
             }
             catch (Exception)
@@ -150,14 +174,14 @@ namespace MvcIndexer
         {
             String url = obj.ToString();
             Boolean resourceNotFound = false;
-            if (url.Contains(URLIP) || url.Contains("www.multitech.com") || url.Contains("support.multitech.com") || url.Contains("multitech.net") || (!url.Contains("/") && !url.Contains(@"\")) || url.StartsWith("/"))
+            if (url.Contains(host))
             {
-                String oldurl = url; ///oldurl will be the one that contains a possible go handle url.
-                //Boolean StopLooping = false;
+                String oldurl = url; ///oldurl will be the one that contains a possible rerouted url.
                 string htmlText = "";
+                HttpCode code;
                 try
                 {
-                    htmlText = GetWebText(ref url, false);
+                    htmlText = GetHtml(url, out code);//(ref url, false);
                 }
 
                 finally
@@ -239,10 +263,19 @@ namespace MvcIndexer
             return null;
         }
 
-        private static String GetHtml(String Url)
+        private static String GetHtml(String Url, out HttpCode Code)
         {
+            Code = HttpCode.NotFound404;
+            ///get the text - report errors
             return "";
-        }       
+        }
+        private enum HttpCode
+        {
+            OK200 = 200,
+            NotFound404 = 404,
+            SomethingBad4XX = 499,
+            Reroute3XX = 399
+        }
     }
 
     internal class LinkParser
