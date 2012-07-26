@@ -28,3 +28,6 @@ what to do about urls with IDs (like announcements and resolutions) - how to pri
 	- Use list from a file
 
 	file would contain urls that are not [Indexable]'d and Urls that are, but more information needs to be provided
+
+
+--Always lowercase links

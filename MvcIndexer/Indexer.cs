@@ -12,16 +12,16 @@ namespace MvcIndexer
     {
         private static readonly MvcIndexer _indexer = new MvcIndexer();
 
-        private String root = "";
+        public String Root { get; set; }
         private IndexType type = IndexType.Continuous; 
         private DateTime start = new DateTime();
         private String seed = "";
-        private Boolean discovery = false;
+        public Boolean Discovery { get; set; }
 
         private IndexUrls urls = null;
 
-        private Boolean automaster = false;
-        private HtmlFilter[] filters = null;
+        public Boolean AutoMasterRemoval { get; set; }
+        public HtmlFilter[] Filters { get; set; }
 
         static MvcIndexer()
         {
@@ -31,7 +31,7 @@ namespace MvcIndexer
         { 
         }
 
-        public MvcIndexer Indexer
+        public static MvcIndexer Indexer
         {
             get { return _indexer; }
             private set { }
@@ -40,19 +40,19 @@ namespace MvcIndexer
 
         public void SetConfiguration(MvcIndexerConfig config)
         {
-            root = config.RootDomain;
+            Root = config.RootDomain;
             type = config.IndexType;
             start = config.ScheduledStart;
             seed = config.SeedUrl;
-            discovery = config.UrlDiscovery;
+            Discovery = config.UrlDiscovery;
 
-            automaster = config.AutoDetectAndRemoveMaster;
-            filters = config.Filters;
+            AutoMasterRemoval = config.AutoDetectAndRemoveMaster;
+            Filters = config.Filters;
         }
 
         public Boolean StartIndexer()
-        {            
-            if (!(root == ""))
+        {
+            if (!(Root == ""))
             {
                 urls = Indexable.GetIndexable();
                 ///get the stuff started
@@ -60,7 +60,7 @@ namespace MvcIndexer
                 if (seed == null || seed == "")
                     seedurl = seed;
                 else
-                    seedurl = root + urls.Urls[0].Path;
+                    seedurl = Root + urls.Urls[0].Path;
 
                 IndexedPage[] indexpages = Index.Crawl(seedurl);
                 
@@ -74,29 +74,19 @@ namespace MvcIndexer
 
     internal class Index
     {
-        private static String host;
-
         public static IndexedPage[] Crawl(String SeedUrl, String Host)
         {
-            host = Host;
-            ///0) split off a thread
-            ///1) Get HTML of seed
-            ///     - put in _content
-            ///2) Parse Urls
-            ///     - toss out urls if UrlDiscovery is false
-            ///3) Run Filters if present
-            ///     - put in PureContent
-            ///4) if crawl type is continuous slowly churn through them based on some 
-            /// arbitrary limit based on a page every 3 seconds or something.
-            /// if crawl type is scheduled, do a threadpool and burn through them
-            ///5) if automaster is true then try to toss the common elements found
-            /// -- might be able to find based on css class or ids ?
+            MvcIndexer.Indexer.Root = Host;
+
             return null;
         }
         public static IndexedPage[] Crawl(String SeedUrl)
         {
-            Uri seed = new Uri(SeedUrl);
-            host = seed.Host;
+            if (MvcIndexer.Indexer.Root == "")
+            {
+                Uri seed = new Uri(SeedUrl);
+                MvcIndexer.Indexer.Root = seed.Host;
+            }
             ///0) split off a thread
             ///1) Get HTML of seed
             ///     - put in _content
@@ -115,30 +105,29 @@ namespace MvcIndexer
 
         private void CrawlPages(String SeedUrl)
         {
-         
-            
-            string htmlText = "";
+            String htmlText;
             try
             {
-                htmlText = GetHtml(SeedUrl);// GetWebText(ref SeedUrl, false);
-                LinksToCrawl.Links[SeedUrl] = new CrawlInfo(1, true, SeedUrl, SeedUrl);
+                if (GetHtml(out htmlText, ref SeedUrl) == (HttpCode.OK200 | HttpCode.Reroute3XX))
+                {
+                    LinksToCrawl.Links[SeedUrl] = new CrawlInfo(1, true, SeedUrl, SeedUrl);
+                }
             }
             catch (Exception)
             {
-                LinksToCrawl.Links[SeedUrl] = new CrawlInfo(1, false, SeedUrl, SeedUrl);
+                htmlText = null;
+                LinksToCrawl.Links[SeedUrl] = new CrawlInfo(1, false, SeedUrl, SeedUrl) ;
             }
 
             LinkParser.ParseLinks(htmlText, SeedUrl);
 
-            
 
+            
             ThreadPool.SetMaxThreads(5, 5);
-            int LoopWithoutNewUrlsCount = 0;
+            Int32 LoopWithoutNewUrlsCount = 0;
 
             while (LoopWithoutNewUrlsCount < 3)
             {
-                //Logger.Instance.PushLog();
-
                 LinksToCrawl.Links.UpdateUrls();
 
                 Boolean LoopWithoutNewUrls = true;
@@ -173,75 +162,46 @@ namespace MvcIndexer
         public void CrawlCallback(object obj)
         {
             String url = obj.ToString();
-            Boolean resourceNotFound = false;
-            if (url.Contains(host))
+            if (url.Contains(MvcIndexer.Indexer.Root))
             {
                 String oldurl = url; ///oldurl will be the one that contains a possible rerouted url.
-                string htmlText = "";
-                HttpCode code;
+                String htmlText;
                 try
                 {
-                    htmlText = GetHtml(url, out code);//(ref url, false);
-                }
-
-                finally
-                {
-                    resourceNotFound = htmlText.Contains("Resource Not Found");
-                    if (resourceNotFound || htmlText == "" || htmlText == "FAILURE")
+                    if (GetHtml(out htmlText, ref url) != (HttpCode.OK200 | HttpCode.Reroute3XX))
+                    {
                         MarkUrl(oldurl, false, true, true);
-                    else if (htmlText == "SUCCESS")
-                        MarkUrl(oldurl, true, true, false);
-                    //if (oldurl != url)
-                    //    MarkUrl(oldurl, false, true);
+                        return;
+                    }
                 }
-                //Console.WriteLine("\turl translated: " + url);
-                if (oldurl != url && oldurl + "/" != url && !resourceNotFound)
+                catch(Exception)
                 {
-                    LinksToCrawl.Links.Urls[oldurl].RealUrl = url;
+                    MarkUrl(oldurl, false, true, true);
+                    return;
                 }
-                RemoveDropDownMenuCodeFromHtmlText(ref htmlText);
-                //RemoveSideMenuFromHtmlText(ref htmlText);
-                RemoveFooterFromHtmlText(ref htmlText);
+               
+                if (oldurl != url && oldurl + "/" != url)
+                {
+                    LinksToCrawl.Links.Urls[oldurl].Url = url;
+                }
 
-                String[] splits = url.Split(new char[] { '/' });
+                LinkParser.ParseLinks(htmlText, oldurl);
 
+                LinksToCrawl.Links.Urls[oldurl].Page = new IndexedPage(htmlText);
 
-                LinkParser.ParseLinks(htmlText, url);
+                foreach (HtmlFilter htmlfilter in MvcIndexer.Indexer.Filters)
+                {
+                    htmlText = htmlfilter(htmlText);
+                }
 
-                CSSClassParser classParser = new CSSClassParser();
-                classParser.ParseForCssClasses(htmlText);
+                if (MvcIndexer.Indexer.AutoMasterRemoval)
+                {
+                    ///remove the master or something?
+                }
 
+                LinksToCrawl.Links.Urls[oldurl].Page.PureContent = htmlText;
 
-                //Add data to main data lists
-                //AddRangeButNoDuplicates(_externalUrls, linkParser.ExternalUrls);
-                //AddRangeButNoDuplicates(_otherUrls, linkParser.OtherUrls);
-                //AddRangeButNoDuplicates(_failedUrls, linkParser.BadUrls);
-                AddRangeButNoDuplicates(_classes, classParser.Classes);
-
-                //foreach (string exception in linkParser.Exceptions)
-                //    _exceptions.Add("Link parse exception: " + exception + "on page : " + obj.ToString());
-
-                RemoveSideMenuFromHtmlText(ref htmlText);
-                #region SaveFile
-                Boolean Saved = false;
-                
-                //{
-                String tmpUrl = url.ToLower();
-                if (!url.EndsWith("/"))
-                    tmpUrl = tmpUrl + "/";
-                Uri tmpUri = new Uri(BASEURI, tmpUrl);
-
-                ///Need to save HTML content
-                #endregion
-
-                MarkUrl(oldurl, true, Saved, false);
-                //MarkUrl(url, Saved, false);
-                //}
-                //else
-                //{
-                //    MarkUrl(oldurl, Saved, false); ///they should both be the same, but because of an added "/" in some cases the oldurl should be more accurate, but the url can still be saved
-                //}
-
+                MarkUrl(oldurl, true, true, false);
             }
             else
                 MarkUrl(url, false, true, false);
@@ -258,43 +218,34 @@ namespace MvcIndexer
                 LinksToCrawl.Links.Urls[Url].GiveUp = true;
         }
 
-        private static String[] GetLinks(String Url)
-        {
-            return null;
-        }
 
-        private static String GetHtml(String Url, out HttpCode Code)
+        private static HttpCode GetHtml(out String HtmlText, ref String Url)
         {
-            Code = HttpCode.NotFound404;
-            ///get the text - report errors
-            return "";
+            ///get text, check retrieved url after reroutes, and return httpcode
+            HtmlText = "";
+            return HttpCode.NotFound404;
         }
         private enum HttpCode
         {
             OK200 = 200,
             NotFound404 = 404,
-            SomethingBad4XX = 499,
-            Reroute3XX = 399
+            SomethingBad4XX = 4,
+            Reroute3XX = 3
         }
     }
 
     internal class LinkParser
     {
-        private const string _LINK_REGEX = "href=\"[ \t\r\n]*[ a-zA-Z./:&\\d_-]+\"";
-      
+        private const String LINK_REGEX = "href=\"[ \t\r\n]*[ a-zA-Z./:&\\d_-]+\"";
 
-        public static void ParseLinks(String HtmlText/*Page page*/, string sourceUrl)
+        public static void ParseLinks(String HtmlText, String sourceUrl)
         {
-            //LinkFixers lf = new LinkFixers();
-            #region LINK_REGEX
-            MatchCollection matches = Regex.Matches(HtmlText, _LINK_REGEX);
+            MatchCollection matches = Regex.Matches(HtmlText, LINK_REGEX);
 
-            for (int i = 0; i <= matches.Count - 1; i++)
+            for (Int32 i = 0; i <= matches.Count - 1; i++)
             {
                 Match anchorMatch = matches[i];
 
-                //if (anchorMatch.Value.ToLower().Contains("cohen")) { 
-                //    Console.Write("BOO!"); }
                 if (anchorMatch.Value == String.Empty)
                 {
                     if (!LinksToCrawl.Links.BlankUrls.Contains(sourceUrl))
@@ -302,63 +253,23 @@ namespace MvcIndexer
                     continue;
                 }
 
-                string foundHref = "";
+                String foundHref = "";
                 try
                 {
                     foundHref = anchorMatch.Value.Replace("href=\"", "");
                     foundHref = foundHref.Substring(0, foundHref.IndexOf("\"")).ToLower().Replace("\r", "").Replace("\n", "").Trim().ToLower();
-                    if (Regex.IsMatch(foundHref, "res+([0-9]{1,7}).asp"))
-                    {
-                        if (foundHref.EndsWith(".asp"))
-                            foundHref = foundHref + "x";
-                        //Console.WriteLine("\thref resolution: " + foundHref);
-                        //continue;
-                    }
                 }
                 catch (Exception exc)
                 {
                     LinksToCrawl.Links.NewUrls[sourceUrl].Exceptions.Add("Error parsing matched href: " + exc.Message);
                 }
-                //if (sourceUrl.Contains("/support/help/resolutions/res")) ///filter out all the ftp.go links that won't work
-                //    continue;
-                //else if ((!foundHref.Contains("multitech.prv") && foundHref.StartsWith("http")) &&
-                //    (!foundHref.Contains("multitech.com") && foundHref.StartsWith("http")))
-                //    continue;
-                String[] urlsplits = sourceUrl.Split(new String[] { "/" }, StringSplitOptions.None);
+                               
+                String realUrl = LinkFixers.FixPath(sourceUrl, foundHref);
 
-                if (urlsplits.Length > 1)
-                {
-                    String[] urldoublesplit = urlsplits[urlsplits.Length - 1].Split(new String[] { "." }, StringSplitOptions.None);
-                    String[] foundhrefsplit = foundHref.Split(new String[] { "." }, StringSplitOptions.RemoveEmptyEntries);
-                    if ((foundhrefsplit[0] == urldoublesplit[0] && urldoublesplit[urldoublesplit.Length - 1].Contains(foundhrefsplit[foundhrefsplit.Length - 1])) || (urldoublesplit[0] == "" && foundHref == "default.asp"))
-                    {
-                        //if(!LinksToCrawl.Links.NewUrls.ContainsKey(foundHref))
-                        //    LinksToCrawl.Links.NewUrls[foundHref] = new CrawlInfo(0, sourceUrl, foundHref, PageType.OldAsp);
-                        //_otherUrls.Add(foundHref);
-                        continue;
-                    }
-                }
-                String realUrl = foundHref;
-                if (realUrl.EndsWith(".go"))
-                {
-                    realUrl = Crawler.GetUrlFromGoHandler(foundHref);
-                    if (realUrl == foundHref)
-                    {
-                        if (!realUrl.Contains("/email/"))
-                        { //log it if its not an email go url
-                            Logger.Instance.Log("Invalid Go url (" + foundHref + ") found on page: " + sourceUrl);
-                        }
-                        continue;//some ignored go handles
-                    }
+                if (realUrl == "" || foundHref == "")
+                    continue;
 
-                }
-
-                realUrl = LinkFixers.FixPath(sourceUrl, realUrl);
-
-                //dumb fix
-                //realUrl = realUrl.Replace("en_us/en_us", "en_us");
-
-                if (IsExternalUrl(realUrl))
+                if (!realUrl.Contains(MvcIndexer.Indexer.Root))
                 {
                     if (LinksToCrawl.Links.NewUrls.ContainsKey(realUrl))
                     {
@@ -368,191 +279,50 @@ namespace MvcIndexer
                     else
                     {
                         LinksToCrawl.Links.NewUrls[realUrl] = new CrawlInfo(0, sourceUrl, realUrl, PageType.External);
-                        if (foundHref.EndsWith(".go"))
-                            LinksToCrawl.Links.NewUrls[realUrl].Url = foundHref;
                     }
                     continue;
                 }
 
-
-                if (realUrl.Contains("site_map.asp") ||
-                    realUrl.Contains("primers.asp") ||
-                    realUrl.Contains("primers/voip.asp") ||
-                    realUrl.Contains("primers/wireless.asp") ||
-                    realUrl.Contains("/partners/sales_channels/online/") ||
-                    realUrl.Contains("/external_device_networking/external_wireless_modems/") ||
-                    realUrl.Contains("/external_device_networking/global_modems/approvals.asp")
-                    )
+                if (LinksToCrawl.Links.NewUrls.ContainsKey(realUrl))
                 {
-                    // do nothing: we don't want the sitemap files in the search index; redirect files corrupt the Crawler
-                    continue;
+                    if (!LinksToCrawl.Links.NewUrls[realUrl].PagesFoundOn.Contains(sourceUrl))
+                        LinksToCrawl.Links.NewUrls[realUrl].PagesFoundOn.Add(sourceUrl);                   
                 }
                 else
                 {
-                    if (!LinksToCrawl.Links.NewUrls.ContainsKey(realUrl))//!GoodUrls.Contains(foundHref))
+                    if (IsAWebPage(realUrl))
                     {
-                        if (!IsAWebPage(realUrl))
-                        { //sourceUrl
-                            if (!foundHref.Equals(String.Empty))
-                            {
-                                //realUrl = lf.FixPath(sourceUrl, realUrl);
-                                if (!LinksToCrawl.Links.NewUrls.ContainsKey(realUrl))
-                                    LinksToCrawl.Links.NewUrls[realUrl] = new CrawlInfo(0, sourceUrl, realUrl, PageType.CssOrPic);
-                                //if(!_otherUrls.Contains(foundHref)){
-                                //_otherUrls.Add(foundHref);}
-                            }
-                        }
-                        else
+                        if (!LinksToCrawl.Links.NewUrls.ContainsKey(realUrl))
                         {
-                            //realUrl = lf.FixPath(sourceUrl, realUrl);
-                            //if (!GoodUrls.Contains(foundHref))
-                            //{
-                            //    GoodUrls.Add(foundHref);
-                            //}
-                            //Boolean testadd;
-                            if (foundHref.EndsWith(".go"))
-                            {
-                                //realUrl = Crawler.GetUrlFromGoHandler(foundHref);
-                                //if (realUrl == foundHref)
-                                //    continue;//some ignored go handles
-
-                                if (!LinksToCrawl.Links.NewUrls.ContainsKey(realUrl))
-                                {
-                                    LinksToCrawl.Links.NewUrls[realUrl] = new CrawlInfo(0, false, sourceUrl, foundHref, realUrl);
-                                }
-                            }
-                            else
-                            {
-                                if (!LinksToCrawl.Links.NewUrls.ContainsKey(realUrl))
-                                {
-                                    LinksToCrawl.Links.NewUrls[realUrl] = new CrawlInfo(0, false, sourceUrl, foundHref);//, foundHref);
-                                }
-                            }
+                            LinksToCrawl.Links.NewUrls[realUrl] = new CrawlInfo(0, false, sourceUrl, foundHref);
                         }
+
                     }
                 }
+                
             }
-            #endregion
-            #region IMGSRC_REGEX
-            MatchCollection imgsrc = Regex.Matches(HtmlText, _IMGSRC_REGEX);
-            foreach (Match anchorMatch in imgsrc)
+        }
+        private static bool IsAWebPage(String foundHref)
+        {
+            if (foundHref.Contains("javascript:"))
+                return false;
+
+            String extension = foundHref.Substring(foundHref.LastIndexOf(".") + 1, foundHref.Length - foundHref.LastIndexOf(".") - 1);
+            switch (extension)
             {
-                //if(anchorMatch.Value.ToLower().Contains("cohen"))
-                //{
-                //    Console.Write("Found the Cohen image");
-                //}
-                if (anchorMatch.Value == String.Empty)
-                {
-                    if (!LinksToCrawl.Links.BlankUrls.Contains(sourceUrl))
-                        LinksToCrawl.Links.BlankUrls.Add(sourceUrl);
-                    //BadUrls.Add("Blank url value on page " + sourceUrl);
-                    continue;
-                }
-
-                string foundHref = null;
-                try
-                {
-                    foundHref = anchorMatch.Value.Replace("src=\"", "");
-                    foundHref = foundHref.Substring(0, foundHref.IndexOf("\"")).ToLower();
-                }
-                catch (Exception exc)
-                {
-                    LinksToCrawl.Links.NewUrls[sourceUrl].Exceptions.Add("Error parsing matched href: " + exc.Message);
-                    //Exceptions.Add("Error parsing matched href: " + exc.Message);
-                }
-                //if (!LinksToCrawl.Links.NewUrls.ContainsKey(foundHref))//!GoodUrls.Contains(foundHref))
-                //{                  
-                if (!IsAWebPage(foundHref))
-                { //sourceUrl
-                    foundHref = LinkFixers.FixPath(sourceUrl, foundHref);
-                    if (!foundHref.Equals(String.Empty))
-                    {
-                        if (!LinksToCrawl.Links.NewUrls.ContainsKey(foundHref))
-                            LinksToCrawl.Links.NewUrls[foundHref] = new CrawlInfo(0, sourceUrl, foundHref, PageType.CssOrPic);
-                        //_otherUrls.Add(foundHref);
-                        //if (!foundHref.Contains("www.multitech.com") && !foundHref.Contains("stage.multitech.prv"))
-                        //{
-                        //    foundHref = foundHref.Replace("http://", "");
-                        //    if(foundHref.StartsWith("/"))
-                        //    {
-                        //        foundHref = Crawler.CURRENT_URL + foundHref;
-                        //    }
-                        //    else
-                        //    {
-                        //        foundHref = Crawler.CURRENT_URL + "/" + foundHref;
-                        //    }
-                        //}
-                        //else if (!foundHref.Contains("en_us"))
-                        //{
-                        //    foundHref = foundHref.Replace("http://stage.multitech.prv/", "").Replace("http://www.multitech.com/", "");
-                        //    foundHref = Crawler.CURRENT_URL + "/" + foundHref;
-                        //}
-                        if (IsExternalUrl(foundHref))
-                        {
-                            LinksToCrawl.Links.NewUrls[foundHref].Type = LinksToCrawl.Links.NewUrls[foundHref].Type | PageType.External;
-                        }
-                        else if (!File.Exists(foundHref.Replace(Crawler.CURRENT_URL + "/", Crawler.CURRENT_INETPUB).Replace("http://www.multitech.com/en_us/", Crawler.CURRENT_INETPUB).Replace("/", @"\")))
-                        {
-                            //_badUrls.Add(foundHref + " on page at ("+ sourceUrl +")");
-                            LinksToCrawl.Links.NewUrls[foundHref].Type = LinksToCrawl.Links.NewUrls[foundHref].Type | PageType.Bad;
-                        }
-                    }
-                    //}                
-                }
+                case "gif":
+                case "swf":
+                case "ico":
+                case "jpg":
+                case "png":
+                case "css":
+                case "jpeg":
+                    return false;
+                default:
+                    return true;
             }
-            #endregion
-            #region IMGURL_REGEX
-            MatchCollection imgurl = Regex.Matches(HtmlText, _IMGURL_REGEX);
-            foreach (Match anchorMatch in imgurl)
-            {
-                if (anchorMatch.Value == String.Empty)
-                {
-                    if (!LinksToCrawl.Links.BlankUrls.Contains(sourceUrl))
-                        LinksToCrawl.Links.BlankUrls.Add(sourceUrl);
-                    //BadUrls.Add("Blank url value on page " + sourceUrl);
-                    continue;
-                }
-
-                string foundHref = null;
-                try
-                {
-                    foundHref = anchorMatch.Value.Replace("url(\"", "");
-                    foundHref = foundHref.Substring(0, foundHref.IndexOf("\")")).ToLower();
-                }
-                catch (Exception exc)
-                {
-                    LinksToCrawl.Links.NewUrls[sourceUrl].Exceptions.Add("Error parsing matched href: " + exc.Message);
-                    //Exceptions.Add("Error parsing matched href: " + exc.Message);
-                }
-                if (!LinksToCrawl.Links.NewUrls.ContainsKey(foundHref))//!GoodUrls.Contains(foundHref))
-                {
-                    if (!IsAWebPage(foundHref))
-                    { //sourceUrl
-                        foundHref = LinkFixers.FixPath(sourceUrl, foundHref);
-                        if (!foundHref.Equals(String.Empty))
-                        {
-                            if (!LinksToCrawl.Links.NewUrls.ContainsKey(foundHref))
-                                LinksToCrawl.Links.NewUrls[foundHref] = new CrawlInfo(0, sourceUrl, foundHref, PageType.CssOrPic);
-                            //_otherUrls.Add(foundHref);
-                            if (!File.Exists(foundHref.Replace(Crawler.CURRENT_URL, Crawler.CURRENT_INETPUB).Replace("/", @"\")))
-                            {
-                                //if (!LinksToCrawl.Links.NewUrls.ContainsKey(foundHref))
-                                LinksToCrawl.Links.NewUrls[foundHref].Type = LinksToCrawl.Links.NewUrls[foundHref].Type | PageType.Bad;// = new CrawlInfo(0, sourceUrl, foundHref, PageType.Bad);
-                                //_badUrls.Add(foundHref + " on page at (" + sourceUrl + ")");
-                            }
-                        }
-                    }
-                }
-            }
-            #endregion
         }
 
-
-
-    }
-
-    public class Links
-    {
 
     }
 }
