@@ -23,7 +23,7 @@ give indexer the ability to take some anon functions as filters on the html
 		-- "map reduce" this at night?
 
 
-what to do about urls with IDs (like announcements and resolutions) - how to prioritize them?  
+what to do about urls with IDs - how to prioritize them?  
 	- Use base path's priority/keywords
 	- Use list from a file
 
