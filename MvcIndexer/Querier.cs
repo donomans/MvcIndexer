@@ -26,6 +26,7 @@ namespace MvcIndexer
 
         public SearchResults Get(String Query)
         {
+            ///How can I search through content of IndexCache quickly?
             return null;
         }
 

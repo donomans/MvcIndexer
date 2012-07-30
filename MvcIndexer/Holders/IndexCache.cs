@@ -7,15 +7,16 @@ using MvcIndexer.Holders;
 namespace MvcIndexer.Holders
 {
     public class IndexCache
-    {
+    {///should this be a singleton?
+     
         private static readonly IndexCache _indexcache = new IndexCache();
 
         /// <summary>
         /// cache dictionary - 
         /// Key is a keyword
-        /// Value is the page contents and information
+        /// Value is the page contents and information of pages matching that Keyword
         /// </summary>
-        private Dictionary<String, IndexedPage> _cache = new Dictionary<String, IndexedPage>();
+        private Dictionary<String, Page[]> _cache = new Dictionary<String, Page[]>();
 
         static IndexCache()
         {

@@ -159,7 +159,7 @@ namespace MvcIndexer
 
             }
         }
-        public void CrawlCallback(object obj)
+        private void CrawlCallback(object obj)
         {
             String url = obj.ToString();
             if (url.Contains(MvcIndexer.Indexer.Root))
@@ -238,7 +238,17 @@ namespace MvcIndexer
     {
         private const String LINK_REGEX = "href=\"[ \t\r\n]*[ a-zA-Z./:&\\d_-]+\"";
 
-        public static void ParseLinks(String HtmlText, String sourceUrl)
+
+        /// <summary>
+        /// this needs work - what to take and what to return? 
+        /// 
+        /// Return a Link?  and take a source Page?
+        /// 
+        /// </summary>
+        /// <param name="HtmlText"></param>
+        /// <param name="sourceUrl"></param>
+        /// <returns></returns>
+        public static String[] ParseLinks(String HtmlText, String sourceUrl)
         {
             MatchCollection matches = Regex.Matches(HtmlText, LINK_REGEX);
 
@@ -321,8 +331,10 @@ namespace MvcIndexer
                 default:
                     return true;
             }
+        }            
+        public static string FixPath(string originatingUrl, string link)
+        {
+            return new Uri(new Uri(originatingUrl), link).AbsoluteUri;
         }
-
-
     }
 }

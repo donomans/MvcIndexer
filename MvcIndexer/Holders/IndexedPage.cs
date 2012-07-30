@@ -12,79 +12,121 @@ namespace MvcIndexer.Holders
         /// - Needs 
         /// 
 
-        private Dictionary<String, IndexedPage> _pages = new Dictionary<String, IndexedPage>();
+        private Dictionary<String, Link> _pages = new Dictionary<String, Link>();
 
-        public Dictionary<String, IndexedPage> Pages { get { return _pages; } set { throw new Exception("Cannot set IndexedPages.Pages"); } }
-
-
-
+        
         public IEnumerable<Link> GetUncrawledLinks()
         {
             List<Link> Uncrawled = new List<Link>();
             _pages.Map(p =>
             {
-                p.Value.Links.LinkBundle.Map(l =>
+                if (!p.Value.Crawled)
                 {
-                    if (!l.Crawled)
-                    {
-                        if(!Uncrawled.Contains(l))
-                            Uncrawled.Add(l);
-                    }
-                });
+                    if(!Uncrawled.Contains(p.Value))
+                        Uncrawled.Add(p.Value);
+                }
             });
             return Uncrawled;
         }
+
+        /// <summary>
+        /// Add a link safely to the collection after parsing
+        /// </summary>
+        /// <param name="link"></param>
+        public void AddLink(Link link)
+        {
+            ///check if link is unique (judging by the url) and either merge or add it to an indexedpage
+            Link linkforpages = FindPage(link);
+            _pages[linkforpages.Url] = linkforpages;
+        }
+
+        /// <summary>
+        /// Find and merge links
+        /// </summary>
+        /// <param name="link"></param>
+        /// <param name="retlink">Link</param>
+        /// <returns>
+        /// True if duplicate was found (update _pages)
+        /// False if new link is appropriate
+        /// </returns>
+        private Link FindPage(Link link)
+        {
+            Link retlink = link;
+            Boolean duplicate = false;
+            ///get the matching links (should only be 1 at most if this is consistent)
+            _pages.Map(p =>
+            {
+                if (p.Key == link.Url)
+                {
+                    retlink = p.Value;
+                    duplicate = true;
+                }
+            });
+            
+            ///merge duplicates
+            if (duplicate)
+            {
+                ///map through all pagesfoundon (should only be one in the "link" but possibly many in the dupe) and add it to the list
+                link.PagesFoundOn.Map(p =>
+                    {
+                        if (!retlink.PagesFoundOn.Contains(p, (l, i) => l.GetHashCode() == i.GetHashCode()))
+                        {
+                            retlink.PagesFoundOn.Add(p);
+                        }
+                    });
+            }
+           
+            return retlink;
+        }       
     }
 
-    public class IndexedPage
+    //public class IndexedPage
+    //{
+    //    public Page Page = new Page();
+
+    //    public Link[] Links = null;
+
+    //    public IndexedPage()
+    //    {
+    //    }
+    //}
+
+    public class Page
     {
         public String[] Keywords = null;
         public Int32 Priority = 0;
         private String _content = "";
         public String Title = "";
 
-        public String PureContent = "";
+        public String PureContent = "";        
+    }       
 
-        public Links Links = null;
+    //public class Links
+    //{ //this doesn't seem to be adding any value
+    //    public List<Link> LinkBundle = new List<Link>();
 
-        public IndexedPage(String Html)
-        {
-            _content = Html;
-        }
-    }
 
-    public class Links
-    {
-        public List<Link> LinkBundle = new List<Link>();
-
-        public IEnumerable<Link> GetUncrawledLinks()
-        {
-            List<Link> Uncrawled = new List<Link>();
-            LinkBundle.Map(l =>             
-            {
-                if (!l.Crawled)
-                {
-                    if (!Uncrawled.Contains(l))
-                        Uncrawled.Add(l);
-                }
-            });
-            return Uncrawled;
-        }
-        /// <summary>
-        /// Fixes a path. Ensures it is a fully functional absolute url.
-        /// </summary>
-        /// <param name="originatingUrl">The url that the link was found in.</param>
-        /// <param name="link">The link to be fixed up.</param>
-        /// <returns>A fixed url that is fit to be fetched.</returns>
-        public static string FixPath(string originatingUrl, string link)
-        {
-            return new Uri(new Uri(originatingUrl), link).AbsoluteUri;
-        }
-    }
+    //    public IEnumerable<Link> GetUncrawledLinks()
+    //    {//not sure if needed
+    //        List<Link> Uncrawled = new List<Link>();
+    //        LinkBundle.Map(l =>             
+    //        {
+    //            if (!l.Crawled)
+    //            {
+    //                if (!Uncrawled.Contains(l))
+    //                    Uncrawled.Add(l);
+    //            }
+    //        });
+    //        return Uncrawled;
+    //    }       
+    //}
 
     public class Link
     {
         public Boolean Crawled = false;
         public String Url = "";
+
+        public Page Page = new Page();
+        public List<Page> PagesFoundOn = new List<Page>(); ///is this useful?  do I care where they were found?
     }
 }

@@ -3,7 +3,7 @@ Indexable Attribute - keeps track of keywords and priority
 Querier - interface to mvc app to query the index
 Indexer - indexes the site
 IndexCache - Structure that holds all the indexed data and can serialize it to a file
-
+IndexedPages - Structure for crawling and keeping track of links?
 
 
 Attribute takes information (Keywords, Priority, Path, etc.)
@@ -24,10 +24,38 @@ give indexer the ability to take some anon functions as filters on the html
 
 
 what to do about urls with IDs - how to prioritize them?  
-	- Use base path's priority/keywords
-	- Use list from a file
+	- Use base path's priority/keywords?
+	- Use list from a file?
 
 	file would contain urls that are not [Indexable]'d and Urls that are, but more information needs to be provided
 
 
 --Always lowercase links
+
+
+Files:
+[Programmer] -> Indexable.cs -> Indexer.cs -> IndexPages.cs -> IndexCache.cs <-> Querier.cs <- [Programmer]
+
+
+Indexer needs to talk to IndexedPage and get fresh links and update page contents
+a "Link" is unique, but it can be found on many pages.  Indexer is Link driven.
+(More Linkiness would presume higher priority value (outside of potential navigation header links))
+
+
+										
+						AddLink				|
+						GetUncrawledLinks	|						
+							|				|
+Indexable -> Indexer ->	IndexedPage -> IndexCache -> Querier
+  |				|							
+ GetIndexable   |
+				|
+			SetConfiguration
+			StartIndexer
+			Crawl (Index class)
+			ParseLinks (LinkParse class)
+
+
+
+	Are IndexPages and IndexCache both necessary?  
+		-Yes, but reuse IndexedPage and remove Links and create an Index class
