@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Reflection;
 using MvcIndexer.Holders;
+using MvcIndexer.Extensions;
 
 namespace MvcIndexer
 {

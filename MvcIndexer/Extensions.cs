@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace System.Linq
+namespace MvcIndexer.Extensions
 {
-    public static class EnumerableExtensionMethods
+    public static class ExtensionMethods
     {
         public static IEnumerable<T> Map<T>(this IEnumerable<T> source, Action<T> action)
         {

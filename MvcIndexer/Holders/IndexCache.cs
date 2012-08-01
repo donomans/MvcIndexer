@@ -24,6 +24,7 @@ namespace MvcIndexer.Holders
 
         private IndexCache()
         {
+            
         }
 
         public IndexCache Cache
@@ -34,5 +35,44 @@ namespace MvcIndexer.Holders
 
 
 
+    }
+
+    public class CacheSet<T>: HashSet<T>
+    {
+        public CacheSet()
+        {
+           
+        }
+        public bool Add(T item)
+        {
+            throw new NotImplementedException();
+        }       
+
+        public void Clear()
+        {
+            throw new NotImplementedException();
+        }
+
+        public int Count
+        {
+            get { throw new NotImplementedException(); }
+        }
+
+        public bool Remove(T item)
+        {
+            throw new NotImplementedException();
+        }
+
+
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            throw new NotImplementedException();
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+        {
+            throw new NotImplementedException();
+        }
     }
 }
