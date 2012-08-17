@@ -55,19 +55,25 @@ namespace MvcIndexer.Holders
             Link retlink = link;
             Boolean duplicate = false;
             ///get the matching links (should only be 1 at most if this is consistent)
-            _pages.Map(p =>
+            if (_pages.ContainsKey(link.Url))
             {
-                if (p.Key == link.Url)
-                {
-                    retlink = p.Value;
-                    duplicate = true;
-                }
-            });
+                retlink = _pages[link.Url];
+                duplicate = true;
+            }
+            //    .Map(p => ///this is definitely going to cause problems in speed.
+            //{
+            //    if (p.Key == link.Url)
+            //    {
+            //        retlink = p.Value;
+            //        duplicate = true;
+            //    }
+            //});
             
             ///merge duplicates
             if (duplicate)
             {
-                ///map through all pagesfoundon (should only be one in the "link" but possibly many in the dupe) and add it to the list
+                ///map through all pagesfoundon (should only be one in the "link" but possibly many in the dupe) 
+                ///and add it to the list instead of adding the new link
                 link.PagesFoundOn.Map(p =>
                     {
                         if (!retlink.PagesFoundOn.Contains(p, (l, i) => l.GetHashCode() == i.GetHashCode()))

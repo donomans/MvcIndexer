@@ -16,8 +16,8 @@ namespace MvcIndexer.Holders
         /// Key is a keyword
         /// Value is the page contents and information of pages matching that Keyword
         /// </summary>
-        private Dictionary<String, Page[]> _cache = new Dictionary<String, Page[]>();
-
+        private Dictionary<String, List<Page>> _cache = new Dictionary<String, List<Page>>(); 
+        
         static IndexCache()
         {
         }
@@ -37,42 +37,42 @@ namespace MvcIndexer.Holders
 
     }
 
-    public class CacheSet<T>: HashSet<T>
-    {
-        public CacheSet()
-        {
+    //public class CacheSet<T>: HashSet<T>
+    //{
+    //    public CacheSet()
+    //    {
            
-        }
-        public bool Add(T item)
-        {
-            throw new NotImplementedException();
-        }       
+    //    }
+    //    public bool Add(T item)
+    //    {
+    //        throw new NotImplementedException();
+    //    }       
 
-        public void Clear()
-        {
-            throw new NotImplementedException();
-        }
+    //    public void Clear()
+    //    {
+    //        throw new NotImplementedException();
+    //    }
 
-        public int Count
-        {
-            get { throw new NotImplementedException(); }
-        }
+    //    public int Count
+    //    {
+    //        get { throw new NotImplementedException(); }
+    //    }
 
-        public bool Remove(T item)
-        {
-            throw new NotImplementedException();
-        }
+    //    public bool Remove(T item)
+    //    {
+    //        throw new NotImplementedException();
+    //    }
 
 
 
-        public IEnumerator<T> GetEnumerator()
-        {
-            throw new NotImplementedException();
-        }
+    //    public IEnumerator<T> GetEnumerator()
+    //    {
+    //        throw new NotImplementedException();
+    //    }
 
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-        {
-            throw new NotImplementedException();
-        }
-    }
+    //    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+    //    {
+    //        throw new NotImplementedException();
+    //    }
+    //}
 }
