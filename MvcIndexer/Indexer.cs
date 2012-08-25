@@ -23,6 +23,9 @@ namespace MvcIndexer
         //public Boolean AutoMasterRemoval { get; set; }
         //public HtmlFilter[] Filters { get; set; }
 
+        private static Boolean IndexRunning = false;
+        private static Boolean ServingSearches = false;
+
         private static MvcIndexerConfig configuration = new MvcIndexerConfig();
         //static MvcIndexer()
         //{
@@ -47,24 +50,33 @@ namespace MvcIndexer
 
         public static Boolean StartIndexer(MvcIndexerConfig Config = null)
         {
-            if (Configuration != null)
-                configuration = Config;
-
-            if (configuration.RootDomain != "")
+            if (!IndexRunning)
             {
-                IndexUrls urls = Indexable.GetIndexable();
-                ///get the stuff started
-                String seedurl = "";
-                if ((configuration.SeedUrl == null || configuration.SeedUrl == "") && urls != null && urls.Urls.Count > 0)
-                    configuration.SeedUrl = configuration.RootDomain + urls.Urls.First().Path;
+                IndexRunning = true;
+                if (Configuration != null)
+                    configuration = Config;
 
-                Link[] indexpages = Index.Crawl(seedurl);
-                
+                if (configuration.RootDomain != "")
+                {
+                    IndexUrls urls = Indexable.GetIndexable();
+                    ///get the stuff started
+                    String seedurl = "";
+                    if ((configuration.SeedUrl == null || configuration.SeedUrl == "") && urls != null && urls.Urls.Count > 0)
+                        configuration.SeedUrl = configuration.RootDomain + urls.Urls.First().Path;
 
-                return true;
+                    Link[] indexpages = Index.Crawl(seedurl);
+
+
+                    return IndexRunning;
+                }
+                else
+                {
+                    IndexRunning = false;
+                    return IndexRunning;
+                }
             }
             else
-                return false;
+                return IndexRunning;
         }
     }
 
@@ -96,13 +108,13 @@ namespace MvcIndexer
             {
                 if (GetHtml(out htmlText, ref SeedUrl) == (HttpCode.OK200 | HttpCode.Reroute3XX))
                 {
-                    LinksToCrawl.Links[SeedUrl] = new CrawlInfo(1, true, SeedUrl, SeedUrl);
+                    ///mark url as crawled
                 }
             }
             catch (Exception)
             {
                 htmlText = null;
-                LinksToCrawl.Links[SeedUrl] = new CrawlInfo(1, false, SeedUrl, SeedUrl) ;
+                ///mark exception for this url
             }
 
             LinkParser.ParseLinks(htmlText, SeedUrl);
