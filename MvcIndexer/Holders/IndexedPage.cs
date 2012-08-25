@@ -104,7 +104,7 @@ namespace MvcIndexer.Holders
         public Int32 Priority = 0;
         private String _content = "";
         public String Title = "";
-
+        public String Url = "";
         public String PureContent = "";        
     }       
 
@@ -131,7 +131,10 @@ namespace MvcIndexer.Holders
     public class Link
     {
         public Boolean Crawled = false;
-        public String Url = "";
+        public String Url 
+        {
+            get{ return Page != null ? Page.Url : "";}
+        }
 
         public Page Page = new Page();
         public List<Page> PagesFoundOn = new List<Page>(); ///is this useful?  do I care where they were found?

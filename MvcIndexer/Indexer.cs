@@ -10,59 +10,55 @@ namespace MvcIndexer
 {
     public class MvcIndexer
     {
-        private static readonly MvcIndexer _indexer = new MvcIndexer();
+        //private static readonly MvcIndexer _indexer = new MvcIndexer();
 
-        public String Root { get; set; }
-        private IndexType type = IndexType.Continuous; 
-        private DateTime start = new DateTime();
-        private String seed = "";
-        public Boolean Discovery { get; set; }
+        //public String Root { get; set; }
+        //private IndexType type = IndexType.Continuous; 
+        //private DateTime start = new DateTime();
+        //private String seed = "";
+        //public Boolean Discovery { get; set; }
 
         private IndexUrls urls = null;
 
-        public Boolean AutoMasterRemoval { get; set; }
-        public HtmlFilter[] Filters { get; set; }
+        //public Boolean AutoMasterRemoval { get; set; }
+        //public HtmlFilter[] Filters { get; set; }
 
-        static MvcIndexer()
+        private static MvcIndexerConfig configuration = new MvcIndexerConfig();
+        //static MvcIndexer()
+        //{
+        //}
+
+        //private MvcIndexer()
+        //{ 
+        //}
+
+        //public static MvcIndexer Indexer
+        //{
+        //    get { return _indexer; }
+        //    private set { }
+        //}
+
+
+        public static MvcIndexerConfig Configuration
         {
+            get { return configuration; }
+            set { configuration = value; }
         }
 
-        private MvcIndexer()
-        { 
-        }
-
-        public static MvcIndexer Indexer
+        public static Boolean StartIndexer(MvcIndexerConfig Config = null)
         {
-            get { return _indexer; }
-            private set { }
-        }
+            if (Configuration != null)
+                configuration = Config;
 
-
-        public void SetConfiguration(MvcIndexerConfig config)
-        {
-            Root = config.RootDomain;
-            type = config.IndexType;
-            start = config.ScheduledStart;
-            seed = config.SeedUrl;
-            Discovery = config.UrlDiscovery;
-
-            AutoMasterRemoval = config.AutoDetectAndRemoveMaster;
-            Filters = config.Filters;
-        }
-
-        public Boolean StartIndexer()
-        {
-            if (!(Root == ""))
+            if (configuration.RootDomain != "")
             {
-                urls = Indexable.GetIndexable();
+                IndexUrls urls = Indexable.GetIndexable();
                 ///get the stuff started
                 String seedurl = "";
-                if (seed == null || seed == "")
-                    seedurl = seed;
-                else
-                    seedurl = Root + urls.Urls[0].Path;
+                if ((configuration.SeedUrl == null || configuration.SeedUrl == "") && urls != null && urls.Urls.Count > 0)
+                    configuration.SeedUrl = configuration.RootDomain + urls.Urls.First().Path;
 
-                IndexedPage[] indexpages = Index.Crawl(seedurl);
+                Link[] indexpages = Index.Crawl(seedurl);
                 
 
                 return true;
@@ -74,20 +70,10 @@ namespace MvcIndexer
 
     internal class Index
     {
-        public static IndexedPage[] Crawl(String SeedUrl, String Host)
+        public static Link[] Crawl(String SeedUrl)
         {
-            MvcIndexer.Indexer.Root = Host;
-
-            return null;
-        }
-        public static IndexedPage[] Crawl(String SeedUrl)
-        {
-            if (MvcIndexer.Indexer.Root == "")
-            {
-                Uri seed = new Uri(SeedUrl);
-                MvcIndexer.Indexer.Root = seed.Host;
-            }
-            ///0) split off a thread
+            Uri seed = new Uri(SeedUrl);
+            ///0) split off a task queue
             ///1) Get HTML of seed
             ///     - put in _content
             ///2) Parse Urls
