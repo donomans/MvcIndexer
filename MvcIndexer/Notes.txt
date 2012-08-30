@@ -43,17 +43,17 @@ a "Link" is unique, but it can be found on many pages.  Indexer is Link driven.
 
 
 										
-						AddLink				|
-						GetUncrawledLinks	|						
+						-AddLink			|
+						-GetUncrawledLinks	|						
 							|				|
 Indexable -> Indexer ->	IndexedPage -> IndexCache -> Querier
   |				|							
- GetIndexable   |
+GetIndexable    |
 				|
 			SetConfiguration
 			StartIndexer
-			Crawl (Index class)
-			ParseLinks (LinkParse class)
+			-Crawl (Index class)
+			-ParseLinks (LinkParse class)
 
 
 

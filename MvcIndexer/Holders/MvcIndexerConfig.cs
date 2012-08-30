@@ -9,7 +9,7 @@ namespace MvcIndexer.Holders
     {
         /// <summary>
         /// Root domain of the index that every URL on site should contain (excluding external URLs)
-        /// Ex: www.google.com
+        /// Ex: http://www.google.com
         /// </summary>
         public String RootDomain { get; set; }
         /// <summary>

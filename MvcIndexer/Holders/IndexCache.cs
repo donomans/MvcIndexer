@@ -7,7 +7,12 @@ using MvcIndexer.Holders;
 namespace MvcIndexer.Holders
 {
     public class IndexCache
-    {///should this be a singleton?
+    {///should this be a singleton?  
+     ///probably not.  querier can be, for convenience of interface, 
+     ///but this is probably something that the querier should have as a private member?
+     
+     ///IndexCache is something that can continually be rebuilt and reset over some period of time
+     ///there can be multiple.  potentially for different "indexes" on the site (like for a support section or articles or whatever)
      
         private static readonly IndexCache _indexcache = new IndexCache();
 
@@ -20,6 +25,7 @@ namespace MvcIndexer.Holders
         
         static IndexCache()
         {
+            
         }
 
         private IndexCache()

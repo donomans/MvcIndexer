@@ -23,6 +23,9 @@ namespace MvcIndexer
             private set { }
         }
 
+        internal void SetIndex(IndexCache index)
+        {
+        }
 
         public SearchResults Get(String Query)
         {
