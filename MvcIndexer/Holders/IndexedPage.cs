@@ -103,10 +103,31 @@ namespace MvcIndexer.Holders
         public String[] Keywords = null;
         public Int32 Priority = 0;
         private String _content = "";
+        private String _strippedcontent = "";
         public String Title = "";
         public String Url = "";
-        public String PureContent = "";        
+        public String PureContent 
+        {
+            get{ return _content;}
+            set
+            { 
+                _content = value;
+                StrippedContent = _content;
+            }
+        }
+        public String StrippedContent
+        {
+            get { return _strippedcontent; }
+            set { _strippedcontent = StripHtml(value); }
+        }
+        private static String StripHtml(String HtmlContent)
+        {
+            ///strip out all Html tags and html specific content like <script> tags 
+            ///(only some tags need to have the inner content stripped as well)
+            return "";
+        }
     }       
+
 
     //public class Links
     //{ //this doesn't seem to be adding any value
