@@ -44,7 +44,8 @@ namespace MvcIndexer.Holders
 
         /// <summary>
         /// Custom filters to run on each page after a url get
-        /// Will run in order provided
+        /// It will run in order provided and 
+        /// before any link parsing happens (assuming UrlDiscovery is true)
         /// </summary>
         public HtmlFilter[] Filters { get; set; }
 

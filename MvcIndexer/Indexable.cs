@@ -8,7 +8,7 @@ using MvcIndexer.Extensions;
 
 namespace MvcIndexer
 {
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
+    [AttributeUsage(AttributeTargets.Method)] ///handle classes also in the future.
     public sealed class Indexable : System.Attribute
     {
         /// <summary>
@@ -24,7 +24,7 @@ namespace MvcIndexer
         /// "/{controller}/{action}?q=mvc&type=all" or
         /// Path + "?q=mvc&type=all" if provided
         /// 
-        /// Provide a blank string if Path alone is also to be indexed
+        /// **Provide a blank string if Path alone is also to be indexed
         /// </summary>
         public String[] AdditionalUrl { get; set; }
         /// <summary>
@@ -45,15 +45,16 @@ namespace MvcIndexer
         /// </summary>
         public Int32 Priority { get; set; }
 
-        protected internal static IndexUrls GetIndexable()
+        protected internal static IndexedPages GetIndexable()
         {
             List<MethodInfo> mi = new List<MethodInfo>(GetAllIndexableMethods());
-            IndexUrls urls = new IndexUrls();
-            
+            //IndexUrls urls = new IndexUrls();
+            IndexedPages pages = new IndexedPages();
+
             foreach (MethodInfo method in mi)
             {
                 Indexable i = (Indexable)Attribute.GetCustomAttribute(method, typeof(Indexable));
-               
+                
                 if (i.AdditionalUrl != null && i.AdditionalUrl.Length > 0)
                 {
                     foreach(String addurl in i.AdditionalUrl)
@@ -78,17 +79,39 @@ namespace MvcIndexer
                                     UrlPath = i.Path + "/" + addurl;
                             }
                         }
-                        urls.Urls.Add(new IndexUrl()
+                        
+                        pages.AddLink(new Link()
                         {
-                            Path = UrlPath,                                
-                            Keywords = i.Keywords,
-                            KeywordsAndPriority = i.KeywordsAndPriority,
-                            Priority = i.Priority
+                            Crawled = false,
+                            Page = new Page()
+                            {
+                                Keywords = i.Keywords.ToDictionaryKey<String, Int32>(k => -1),
+                                KeywordPriority = i.KeywordsAndPriority,
+                                Priority = i.Priority,
+                                Url = UrlPath
+                            }
                         });
+                        //if (i.AdditionalUrl != null && i.AdditionalUrl.Length > 0)
+                        //{
+                        //    foreach (String additionalurl in i.AdditionalUrl)
+                        //    {
+                        //        pages.AddLink(new Link()
+                        //        {
+                        //            Crawled = false,
+                        //            Page = new Page()
+                        //            {
+                        //                Keywords = i.Keywords.ToDictionaryKey<String, Int32>(k => -1),
+                        //                KeywordPriority = i.KeywordsAndPriority,
+                        //                Priority = i.Priority,
+                        //                Url = UrlPath + additionalurl
+                        //            }
+                        //        });
+                        //    }
+                        //}
                     }
                 }
             }
-            return urls;
+            return pages;
         }
 
         private static IEnumerable<MethodInfo> GetAllIndexableMethods()

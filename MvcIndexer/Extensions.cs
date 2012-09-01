@@ -37,6 +37,19 @@ namespace MvcIndexer.Extensions
             return contains;
         }
 
+        public static Dictionary<TKey, TValue> ToDictionaryKey<TKey, TValue>(this IEnumerable<TKey> source, Func<TKey, TValue> valueselector)
+        {
+            if (valueselector == null)
+                throw new ArgumentNullException("valueselector");
+
+            Dictionary<TKey, TValue> dict = new Dictionary<TKey, TValue>(source.Count());
+            foreach (TKey key in source)
+            {
+                dict.Add(key, valueselector(key));
+            }
+            return dict;
+        }
+
         public delegate Boolean Comparer<in T1, in T2>(T1 arg1, T2 arg2);
     }
 }

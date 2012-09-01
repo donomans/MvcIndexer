@@ -7,7 +7,7 @@ using MvcIndexer.Extensions;
 
 namespace MvcIndexer.Holders
 {
-    public class IndexedPages
+    public class IndexedPages: IEnumerable<Link>
     {
         /// - Needs a means of keeping track of all the links added to it so that it can help the crawler (loop through and find links that haven't been crawled yet?)
         /// - Needs 
@@ -15,7 +15,26 @@ namespace MvcIndexer.Holders
 
         private Dictionary<String, Link> _pages = new Dictionary<String, Link>();
 
-        
+        //public static IndexedPages operator +(IndexedPages pagesA, IndexedPages pagesB)
+        //{
+        //    IndexedPages pages = new IndexedPages(); ///is this going to be a leaky?
+        //    foreach (Link link in pagesA)
+        //    {
+        //        pages.AddLink(link);
+        //    }
+        //    foreach (Link link in pagesB)
+        //    {
+        //        pages.AddLink(link);
+        //    }
+        //    return pages;
+        //}
+
+        public Link this[String url]
+        {
+            get { return _pages[url]; }
+            set { _pages[url] = value; }
+        }
+
         public IEnumerable<Link> GetUncrawledLinks()
         {            
             List<Link> Uncrawled = new List<Link>();
@@ -41,14 +60,24 @@ namespace MvcIndexer.Holders
             _pages[linkforpages.Url] = linkforpages;
         }
 
+        public void AddLink(String url)
+        {
+
+        }
+
+        public void AddLinks(IndexedPages pages)
+        {
+            foreach (Link link in pages)
+                AddLink(link);
+        }
+
         /// <summary>
         /// Find and merge links
         /// </summary>
         /// <param name="link"></param>
         /// <param name="retlink">Link</param>
         /// <returns>
-        /// True if duplicate was found (update _pages)
-        /// False if new link is appropriate
+        /// Always returns a safe to use link
         /// </returns>
         private Link FindPage(Link link)
         {
@@ -60,16 +89,9 @@ namespace MvcIndexer.Holders
                 retlink = _pages[link.Url];
                 duplicate = true;
             }
-            //    .Map(p => ///this is definitely going to cause problems in speed.
-            //{
-            //    if (p.Key == link.Url)
-            //    {
-            //        retlink = p.Value;
-            //        duplicate = true;
-            //    }
-            //});
             
-            ///merge duplicates
+            ///merge duplicates PagesFoundOn
+            ///Do I need to do anything with the other data, or just assume the new link takes priority?
             if (duplicate)
             {
                 ///map through all pagesfoundon (should only be one in the "link" but possibly many in the dupe) 
@@ -84,23 +106,28 @@ namespace MvcIndexer.Holders
             }
            
             return retlink;
-        }       
+        }
+
+
+        public IEnumerator<Link> GetEnumerator()
+        {
+            return _pages.Values.GetEnumerator();
+        }
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
     }
 
-    //public class IndexedPage
-    //{
-    //    public Page Page = new Page();
-
-    //    public Link[] Links = null;
-
-    //    public IndexedPage()
-    //    {
-    //    }
-    //}
+  
 
     public class Page
     {
-        public String[] Keywords = null;
+        /// <summary>
+        /// Keywords and the locations within the StrippedContent
+        /// </summary>
+        public Dictionary<String, Int32> Keywords = new Dictionary<String, Int32>();
+        public Dictionary<String, Int32> KeywordPriority = null;// = new Dictionary<String, Int32>();///won't always be used.
         public Int32 Priority = 0;
         private String _content = "";
         private String _strippedcontent = "";
@@ -112,42 +139,16 @@ namespace MvcIndexer.Holders
             set
             { 
                 _content = value;
-                StrippedContent = _content;
             }
         }
         public String StrippedContent
         {
             get { return _strippedcontent; }
-            set { _strippedcontent = StripHtml(value); }
+            set { _strippedcontent = value; }
         }
-        private static String StripHtml(String HtmlContent)
-        {
-            ///strip out all Html tags and html specific content like <script> tags 
-            ///(only some tags need to have the inner content stripped as well)
-            return "";
-        }
+        
     }       
 
-
-    //public class Links
-    //{ //this doesn't seem to be adding any value
-    //    public List<Link> LinkBundle = new List<Link>();
-
-
-    //    public IEnumerable<Link> GetUncrawledLinks()
-    //    {//not sure if needed
-    //        List<Link> Uncrawled = new List<Link>();
-    //        LinkBundle.Map(l =>             
-    //        {
-    //            if (!l.Crawled)
-    //            {
-    //                if (!Uncrawled.Contains(l))
-    //                    Uncrawled.Add(l);
-    //            }
-    //        });
-    //        return Uncrawled;
-    //    }       
-    //}
 
     public class Link
     {
