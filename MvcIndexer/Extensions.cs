@@ -50,6 +50,13 @@ namespace MvcIndexer.Extensions
             return dict;
         }
 
+        public static IEnumerable<TKey> TakeByValueDescending<TKey, TValue>(this Dictionary<TKey, TValue> source, Int32 count) where TValue : IComparable
+        {
+            List<KeyValuePair<TKey,TValue>> list = source.ToList();
+            list.Sort((kvp1, kvp2) => kvp2.Value.CompareTo(kvp1.Value));
+            return list.Take(count).Select<KeyValuePair<TKey, TValue>, TKey>(kvp => kvp.Key);
+        }
+
         public delegate Boolean Comparer<in T1, in T2>(T1 arg1, T2 arg2);
     }
 }

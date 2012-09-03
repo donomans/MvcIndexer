@@ -29,6 +29,7 @@ namespace MvcIndexer
 
         public SearchResults Get(String Query)
         {
+            ///weight results based on given keyword weight and also found keyword locality in the pages
             return null;
         }
 

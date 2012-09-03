@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Collections;
 using MvcIndexer.Extensions;
+using System.Threading.Tasks;
 
 namespace MvcIndexer.Holders
 {
@@ -62,7 +63,7 @@ namespace MvcIndexer.Holders
 
         public void AddLink(String url)
         {
-
+            throw new NotImplementedException();
         }
 
         public void AddLinks(IndexedPages pages)
@@ -123,12 +124,41 @@ namespace MvcIndexer.Holders
 
     public class Page
     {
+        private static readonly HashSet<String> stopwords = new HashSet<String>()
+        {
+            "a", "at", "this" ///etc.
+        };
+
+        public Page(String url, String content, String title = "")
+        {
+            Url = url;
+            _content = content;
+            _strippedcontent = content;
+            Title = title != "" ? title : GetTitle(content);
+        }
+        public Page(String url, Int32 priority, Dictionary<String, Int32> keywordspriority, Dictionary<String, Int32> keywords)
+        {
+            Url = url;
+            _keywords = keywords;
+            _keywordspriority = keywordspriority;
+        }
+        
+        private Dictionary<String, Int32> _keywords;
         /// <summary>
         /// Keywords and the locations within the StrippedContent
         /// </summary>
-        public Dictionary<String, Int32> Keywords = new Dictionary<String, Int32>();
-        public Dictionary<String, Int32> KeywordPriority = null;// = new Dictionary<String, Int32>();///won't always be used.
-        public Int32 Priority = 0;
+        public Dictionary<String, Int32> Keywords
+        {
+            get { return _keywords; }
+            //set { _keywords = value; }
+        }
+        private Dictionary<String, Int32> _keywordspriority;
+        public Dictionary<String, Int32> KeywordsPriority
+        {
+            get { return _keywordspriority; }
+            //set { _keywordspriority = value; }
+        }
+        public Int32 Priority = 0; ///won't always be used. only used if provided in the initial creation from the Indexable attribute
         private String _content = "";
         private String _strippedcontent = "";
         public String Title = "";
@@ -136,17 +166,156 @@ namespace MvcIndexer.Holders
         public String PureContent 
         {
             get{ return _content;}
-            set
-            { 
-                _content = value;
-            }
+            //set { _content = value; }
         }
         public String StrippedContent
         {
             get { return _strippedcontent; }
-            set { _strippedcontent = value; }
+            //set { _strippedcontent = value; }
+        }
+
+
+        private static String GetTitle(String content)
+        {
+            String title = "";
+            Int32 titlestart = content.IndexOf("<title>");
+            if (titlestart > 0)
+            {
+                Int32 titleend = content.IndexOf("</title>");
+                title = content.Substring(titlestart + "<title>".Length, titleend - titlestart);
+            }
+            else
+            {
+                titlestart = content.IndexOf("<h1>");
+                if (titlestart > 0)
+                {
+                    Int32 titleend = content.IndexOf("</h1>");
+                    title = content.Substring(titlestart + "<h1>".Length, titleend - titlestart);
+                }
+            }
+            return title;
         }
         
+        private async Task<Dictionary<String, Int32>> FillKeywords()
+        {
+            ///2) keywords
+            ///     - need a list of junk words
+            ///     - find common words in the StrippedContent that aren't in the junk word list
+            String[] potentialkeywords = StrippedContent.ToLower().Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries);
+            Dictionary<String, Int32> wordfrequency = new Dictionary<String, Int32>(potentialkeywords.Length);
+            foreach (String potentialkeyword in potentialkeywords)
+            {
+                if (stopwords.Contains(potentialkeyword))
+                    continue;
+                if (wordfrequency.ContainsKey(potentialkeyword))
+                    wordfrequency[potentialkeyword]++;
+                else
+                    wordfrequency.Add(potentialkeyword, 1);
+            }
+            List<String> frequentwords = new List<String>(wordfrequency.TakeByValueDescending(20));
+            ///3) priority/weighting
+            /// -- how to determine weighting?
+            ///     - frequency?
+            ///     - matching page title?
+            ///     - (in querier the locality should give extra weighting in the ordering of results)
+            ///     - 
+            
+            ///4) locations where the determined/provided keywords reside in the document
+
+            return null;
+        }
+        private async Task<Dictionary<String, Int32>> FillKeywordsPriority()
+        {
+
+            return null;
+        }
+
+        public async Task RunFilters(HtmlFilter[] filters)
+        {
+            foreach (HtmlFilter filter in filters)
+                _strippedcontent = filter(_strippedcontent);
+        }
+
+        public async void StripHtml() 
+        {
+            ///strip the html and then populate the keywords dictionaries
+            _strippedcontent = StripHtml(_strippedcontent);
+            _keywords = await FillKeywords();
+            _keywordspriority = await FillKeywordsPriority();
+        }
+
+        public static String StripHtml(String source)
+        {
+            List<Char> array = new List<Char>(source.Length);
+            Boolean inside = false;
+            Boolean dquotes = false;
+            Boolean squotes = false;
+
+            ///1) look for tags or things that need to be fully removed (entire containing contents) and remove them
+            source = source.Replace("&nbsp;", "").Replace("Â", "").Replace("<br>", " ").Replace("<br />", " ");///special case junk - need to add more things like the trademark symbols and stuff like that
+            String lowersource = source.ToLower();
+            Int32 scriptindex = lowersource.IndexOf("<script");
+            while (scriptindex > 0)
+            {
+                Int32 scriptendindex = lowersource.IndexOf("</script>", scriptindex) + "</script>".Length;
+                lowersource = lowersource.Remove(scriptindex, scriptendindex - scriptindex);
+                source = source.Remove(scriptindex, scriptendindex - scriptindex);
+
+                scriptindex = lowersource.IndexOf("<script");
+            }
+
+            ///really cheesy way for now to remove most of the extra spacing
+            source = source.Replace(Environment.NewLine, "").Replace("  ", "");
+
+            ///2) search entire contents for < and > tags outside of quotes and remove those pieces
+            foreach (Char c in source)
+            {
+                switch (c)
+                {
+                    case '\r':
+                    case '\n':
+                    case '\t':
+                        continue;
+                    case '\'':
+                        if (inside && !dquotes)
+                        {
+                            if (squotes)
+                                squotes = false;
+                            else
+                                squotes = true;
+                            continue;
+                        }
+                        break;
+                    case '"':
+                        if (inside && !squotes)
+                        {
+                            if (dquotes)
+                                dquotes = false;
+                            else
+                                dquotes = true;
+                            continue;
+                        }
+                        break;
+                    case '>':
+                        if (dquotes || squotes) ///if we're within the inside and we are in quotes then we have to keep going
+                            continue;
+                        inside = false;
+                        continue;
+                    case '<':
+                        if (dquotes || squotes) ///if we're in quotes then we have to keep going
+                            continue;
+                        inside = true;
+                        continue;
+                }
+
+                if (!inside)
+                {
+                    array.Add(c);
+                }
+            }
+
+            return new String(array.ToArray()).Trim();
+        }
     }       
 
 
@@ -158,7 +327,7 @@ namespace MvcIndexer.Holders
             get{ return Page != null ? Page.Url : "";}
         }
 
-        public Page Page = new Page();
+        public Page Page = null;//new Page();
         public List<Page> PagesFoundOn = new List<Page>(); ///is this useful?  do I care where they were found?
     }
 }

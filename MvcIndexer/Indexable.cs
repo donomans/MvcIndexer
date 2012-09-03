@@ -83,13 +83,15 @@ namespace MvcIndexer
                         pages.AddLink(new Link()
                         {
                             Crawled = false,
-                            Page = new Page()
-                            {
-                                Keywords = i.Keywords.ToDictionaryKey<String, Int32>(k => -1),
-                                KeywordPriority = i.KeywordsAndPriority,
-                                Priority = i.Priority,
-                                Url = UrlPath
-                            }
+                            Page = new Page(UrlPath, i.Priority, 
+                                i.KeywordsAndPriority, 
+                                i.Keywords.ToDictionaryKey<String, Int32>(k => -1))
+                            //{
+                            //    Keywords = i.Keywords.ToDictionaryKey<String, Int32>(k => -1),
+                            //    KeywordPriority = i.KeywordsAndPriority,
+                            //    Priority = i.Priority,
+                            //    Url = UrlPath
+                            //}
                         });
                         //if (i.AdditionalUrl != null && i.AdditionalUrl.Length > 0)
                         //{

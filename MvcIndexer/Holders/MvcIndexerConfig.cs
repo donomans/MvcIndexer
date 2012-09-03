@@ -58,6 +58,11 @@ namespace MvcIndexer.Holders
         /// </summary>
         public Boolean UrlDiscovery { get; set; }
 
+        /// <summary>
+        /// List of words that should be ignored in the index.
+        /// </summary>
+        public List<String> StopWords { get; set; }
+
     }
 
     /// <summary>

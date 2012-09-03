@@ -14,14 +14,14 @@ namespace MvcIndexer.Holders
      ///IndexCache is something that can continually be rebuilt and reset over some period of time
      ///there can be multiple.  potentially for different "indexes" on the site (like for a support section or articles or whatever)
      
-        private static readonly IndexCache _indexcache = new IndexCache();
+        private static readonly IndexCache indexcache = new IndexCache();
 
         /// <summary>
         /// cache dictionary - 
         /// Key is a keyword
         /// Value is the page contents and information of pages matching that Keyword
         /// </summary>
-        private Dictionary<String, List<Page>> _cache = new Dictionary<String, List<Page>>(); 
+        private Dictionary<String, List<Page>> cache = new Dictionary<String, List<Page>>(); 
         
         static IndexCache()
         {
@@ -35,7 +35,7 @@ namespace MvcIndexer.Holders
 
         public IndexCache Cache
         {
-            get { return _indexcache; }
+            get { return indexcache; }
             private set { }
         }
 
