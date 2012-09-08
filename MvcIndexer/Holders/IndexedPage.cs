@@ -10,6 +10,10 @@ namespace MvcIndexer.Holders
 {
     public class IndexedPages: IEnumerable<Link>
     {
+        public static readonly HashSet<String> STOPWORDS = new HashSet<String>()
+        {
+            "a", "at", "this" ///etc.
+        };
         /// - Needs a means of keeping track of all the links added to it so that it can help the crawler (loop through and find links that haven't been crawled yet?)
         /// - Needs 
         /// 
@@ -100,9 +104,7 @@ namespace MvcIndexer.Holders
                 link.PagesFoundOn.Map(p =>
                     {
                         if (!retlink.PagesFoundOn.Contains(p, (l, i) => l.GetHashCode() == i.GetHashCode()))
-                        {
                             retlink.PagesFoundOn.Add(p);
-                        }
                     });
             }
            
@@ -120,15 +122,14 @@ namespace MvcIndexer.Holders
         }
     }
 
-  
+    public class KeywordInfo
+    {
+        public Int32[] Location = null;
+        public Int32 Priority;
+    }
 
     public class Page
     {
-        private static readonly HashSet<String> stopwords = new HashSet<String>()
-        {
-            "a", "at", "this" ///etc.
-        };
-
         public Page(String url, String content, String title = "")
         {
             Url = url;
@@ -136,27 +137,28 @@ namespace MvcIndexer.Holders
             _strippedcontent = content;
             Title = title != "" ? title : GetTitle(content);
         }
-        public Page(String url, Int32 priority, Dictionary<String, Int32> keywordspriority, Dictionary<String, Int32> keywords)
+        public Page(String url, Int32 priority, Dictionary<String, Int32> keywordspriority, String[] keywords)
         {
             Url = url;
-            _keywords = keywords;
-            _keywordspriority = keywordspriority;
+
+            ///combine keywordspriority and keywords in the Dictionary<String, KeywordInfo> of _keywords
+            _keywords = keywords.ToDictionaryKey<String, KeywordInfo>(k =>  new KeywordInfo());
+            foreach (KeyValuePair<String, Int32> keypriority in keywordspriority)
+            {
+                if (_keywords.ContainsKey(keypriority.Key))
+                    _keywords[keypriority.Key].Priority = keypriority.Value;
+                else
+                    _keywords.Add(keypriority.Key, new KeywordInfo() { Priority = keypriority.Value });
+            }
         }
         
-        private Dictionary<String, Int32> _keywords;
+        private Dictionary<String, KeywordInfo> _keywords;
         /// <summary>
-        /// Keywords and the locations within the StrippedContent
+        /// Keywords, the locations within the StrippedContent, and their weight
         /// </summary>
-        public Dictionary<String, Int32> Keywords
+        public Dictionary<String, KeywordInfo> Keywords
         {
             get { return _keywords; }
-            //set { _keywords = value; }
-        }
-        private Dictionary<String, Int32> _keywordspriority;
-        public Dictionary<String, Int32> KeywordsPriority
-        {
-            get { return _keywordspriority; }
-            //set { _keywordspriority = value; }
         }
         public Int32 Priority = 0; ///won't always be used. only used if provided in the initial creation from the Indexable attribute
         private String _content = "";
@@ -166,12 +168,10 @@ namespace MvcIndexer.Holders
         public String PureContent 
         {
             get{ return _content;}
-            //set { _content = value; }
         }
         public String StrippedContent
         {
             get { return _strippedcontent; }
-            //set { _strippedcontent = value; }
         }
 
 
@@ -193,10 +193,10 @@ namespace MvcIndexer.Holders
                     title = content.Substring(titlestart + "<h1>".Length, titleend - titlestart);
                 }
             }
-            return title;
+            return StripHtml(title);
         }
         
-        private async Task<Dictionary<String, Int32>> FillKeywords()
+        private async Task FillKeywords()
         {
             ///2) keywords
             ///     - need a list of junk words
@@ -205,29 +205,43 @@ namespace MvcIndexer.Holders
             Dictionary<String, Int32> wordfrequency = new Dictionary<String, Int32>(potentialkeywords.Length);
             foreach (String potentialkeyword in potentialkeywords)
             {
-                if (stopwords.Contains(potentialkeyword))
-                    continue;
-                if (wordfrequency.ContainsKey(potentialkeyword))
-                    wordfrequency[potentialkeyword]++;
-                else
-                    wordfrequency.Add(potentialkeyword, 1);
+                ///strip out punctuation
+                List<String> strippedkeywords = StripAndStem(potentialkeyword);
+                foreach (String strippedkeyword in strippedkeywords)
+                {
+                    if (IndexedPages.STOPWORDS.Contains(strippedkeyword))
+                        continue;
+                    if (wordfrequency.ContainsKey(strippedkeyword))
+                        wordfrequency[strippedkeyword]++;
+                    else
+                        wordfrequency.Add(strippedkeyword, 1);
+                }
             }
             List<String> frequentwords = new List<String>(wordfrequency.TakeByValueDescending(20));
-            ///3) priority/weighting
-            /// -- how to determine weighting?
-            ///     - frequency?
-            ///     - matching page title?
-            ///     - (in querier the locality should give extra weighting in the ordering of results)
-            ///     - 
-            
-            ///4) locations where the determined/provided keywords reside in the document
+            foreach (String keyword in frequentwords)
+            {
+                if (_keywords.ContainsKey(keyword))
+                {
+                    ///increase the weight by 4
+                    _keywords[keyword].Priority += 4;
+                }
+                KeywordInfo info = new KeywordInfo();
+                
 
-            return null;
-        }
-        private async Task<Dictionary<String, Int32>> FillKeywordsPriority()
-        {
-
-            return null;
+            }
+            foreach (KeyValuePair<String, KeywordInfo> kvp in _keywords)
+            {
+                ///Cycle through all keyvaluepairs in _keywords
+                ///3) update locations
+                ///4) priority/weighting
+                /// -- how to determine weighting?
+                ///     - frequency?
+                ///     - matching in page title?
+                ///     - matching in url
+                ///     - priority function provided by user (similar to the HtmlFilters)
+                ///     - (in querier the locality should give extra weighting in the ordering of results)
+                ///     - frequency * 3 + (1 + 4 for each found keyword that matches a real keyword + 10 for being in the title)
+            }
         }
 
         public async Task RunFilters(HtmlFilter[] filters)
@@ -236,15 +250,34 @@ namespace MvcIndexer.Holders
                 _strippedcontent = filter(_strippedcontent);
         }
 
+        public List<String> StripAndStem(String source)
+        {   ///®™
+            List<String> dashsplits = new List<String>(source.Split(new []{"-", "®", "™"}, StringSplitOptions.RemoveEmptyEntries));
+            String Stripped =  new String(source.Where(c => !Char.IsPunctuation(c)).ToArray());
+            if (Stripped == "" || dashsplits.Contains(Stripped))
+                return dashsplits;
+            else
+            {
+                if (dashsplits.Count == 1 && !Stripped.Contains(dashsplits[0]))
+                    return new List<String>() { Stripped };
+                else
+                {
+                    List<String> striplist = new List<String>();
+                    foreach (String s in dashsplits)
+                        striplist.AddRange(StripAndStem(s));
+                    striplist.Add(Stripped);
+                    return striplist;
+                }
+            }
+        }
         public async void StripHtml() 
         {
             ///strip the html and then populate the keywords dictionaries
             _strippedcontent = StripHtml(_strippedcontent);
-            _keywords = await FillKeywords();
-            _keywordspriority = await FillKeywordsPriority();
+            await FillKeywords();
         }
-
-        public static String StripHtml(String source)
+        
+        private static String StripHtml(String source)
         {
             List<Char> array = new List<Char>(source.Length);
             Boolean inside = false;
@@ -252,7 +285,7 @@ namespace MvcIndexer.Holders
             Boolean squotes = false;
 
             ///1) look for tags or things that need to be fully removed (entire containing contents) and remove them
-            source = source.Replace("&nbsp;", "").Replace("Â", "").Replace("<br>", " ").Replace("<br />", " ");///special case junk - need to add more things like the trademark symbols and stuff like that
+            //source = source.Replace("<br>", " ").Replace("<br />", " ");
             String lowersource = source.ToLower();
             Int32 scriptindex = lowersource.IndexOf("<script");
             while (scriptindex > 0)
@@ -265,7 +298,7 @@ namespace MvcIndexer.Holders
             }
 
             ///really cheesy way for now to remove most of the extra spacing
-            source = source.Replace(Environment.NewLine, "").Replace("  ", "");
+            source = source.Replace(Environment.NewLine, "").Replace("<br>", " ").Replace("<br />", " ").Replace("  ", "");
 
             ///2) search entire contents for < and > tags outside of quotes and remove those pieces
             foreach (Char c in source)
@@ -328,6 +361,6 @@ namespace MvcIndexer.Holders
         }
 
         public Page Page = null;//new Page();
-        public List<Page> PagesFoundOn = new List<Page>(); ///is this useful?  do I care where they were found?
+        public List<Page> PagesFoundOn = new List<Page>(); ///this can be used to add extra weighting to a page in search results - if it has lots of links to it, it's probably important.
     }
 }

@@ -5,6 +5,7 @@ using System.Text;
 using System.Reflection;
 using MvcIndexer.Holders;
 using MvcIndexer.Extensions;
+using MvcIndexer.Holders;
 
 namespace MvcIndexer
 {
@@ -36,7 +37,7 @@ namespace MvcIndexer
         /// </summary>
         public Dictionary<String, Int32> KeywordsAndPriority { get; set; }
         /// <summary>
-        /// Set of keywords to match
+        /// Set of keywords that use the Priority value
         /// </summary>
         public String[] Keywords { get; set; }
         /// <summary>
@@ -85,31 +86,8 @@ namespace MvcIndexer
                             Crawled = false,
                             Page = new Page(UrlPath, i.Priority, 
                                 i.KeywordsAndPriority, 
-                                i.Keywords.ToDictionaryKey<String, Int32>(k => -1))
-                            //{
-                            //    Keywords = i.Keywords.ToDictionaryKey<String, Int32>(k => -1),
-                            //    KeywordPriority = i.KeywordsAndPriority,
-                            //    Priority = i.Priority,
-                            //    Url = UrlPath
-                            //}
+                                i.Keywords)
                         });
-                        //if (i.AdditionalUrl != null && i.AdditionalUrl.Length > 0)
-                        //{
-                        //    foreach (String additionalurl in i.AdditionalUrl)
-                        //    {
-                        //        pages.AddLink(new Link()
-                        //        {
-                        //            Crawled = false,
-                        //            Page = new Page()
-                        //            {
-                        //                Keywords = i.Keywords.ToDictionaryKey<String, Int32>(k => -1),
-                        //                KeywordPriority = i.KeywordsAndPriority,
-                        //                Priority = i.Priority,
-                        //                Url = UrlPath + additionalurl
-                        //            }
-                        //        });
-                        //    }
-                        //}
                     }
                 }
             }

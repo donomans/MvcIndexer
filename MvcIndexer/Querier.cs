@@ -20,7 +20,6 @@ namespace MvcIndexer
         public Querier Query
         {
             get { return _Indexer; }
-            private set { }
         }
 
         internal void SetIndex(IndexCache index)
@@ -29,7 +28,9 @@ namespace MvcIndexer
 
         public SearchResults Get(String Query)
         {
-            ///weight results based on given keyword weight and also found keyword locality in the pages
+            ///- stem the words?  driver vs drivers
+            ///- weight results based on given keyword weight and also found keyword locality in the pages
+            ///- query in quotes should only show results that include both words on the page with locality prioritized
             return null;
         }
 

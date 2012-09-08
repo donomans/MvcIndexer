@@ -93,18 +93,10 @@ namespace MvcIndexer
 
             #region add the seed page
             Page p = new Page(SeedUrl, html);
-            //p.PureContent = html;
-            //p.StrippedContent = p.PureContent;
-            //p.Title = GetTitle(p.PureContent);
-            //p.Keywords = GetKeywords(p.StrippedContent);
-            //foreach (HtmlFilter filter in MvcIndexer.Configuration.Filters)
-            //    p.StrippedContent = filter(p.StrippedContent);
+            
             await p.RunFilters(MvcIndexer.Configuration.Filters);
             p.StripHtml();
-            //p.StrippedContent = LinkParser.StripHtml(p.StrippedContent);
-            //p.Url = SeedUrl;
-            //p.Keywords = GetKeywords(p.StrippedContent);
-            //p.KeywordPriority = GetKeywordsPriority(p);
+
             index.AddLink(new Link()
             {
                 Crawled = true,
@@ -153,7 +145,7 @@ namespace MvcIndexer
         private async Task CrawlPageAsync(String url)
         {
             HttpClient client = new HttpClient();
-            await client.GetAsync(url).ContinueWith(CrawlPageResponseAsync );
+            await client.GetAsync(url).ContinueWith(CrawlPageResponseAsync);
         }
         private async void CrawlPageResponseAsync(Task<HttpResponseMessage> html)
         {
@@ -169,12 +161,8 @@ namespace MvcIndexer
                 };
                 index[url] = link;
             }
-            //p.Url = html.Result.RequestMessage.RequestUri.ToString();
-            //p.PureContent = await html.Result.Content.ReadAsStringAsync();
-            //p.StrippedContent = p.PureContent;
-            ///need to determine:
-            ///1) title
-            //p.Title = GetTitle(p.PureContent);
+            
+            ///need to:
             ///2) Run filters and StripHtml
             /// -- if automaster is on then try to strip out the master before calling StripHtml
             await link.Page.RunFilters(MvcIndexer.Configuration.Filters);
@@ -184,11 +172,6 @@ namespace MvcIndexer
             }
             
             link.Page.StripHtml();
-            //p.StrippedContent = LinkParser.StripHtml(p.StrippedContent);
-            
-            
-            //p.Keywords = GetKeywords(p.StrippedContent);
-            //p.KeywordPriority = GetKeywordsPriority(p);
             
             ///5) Add new links, if UrlDiscovery is on
             if (MvcIndexer.Configuration.UrlDiscovery)

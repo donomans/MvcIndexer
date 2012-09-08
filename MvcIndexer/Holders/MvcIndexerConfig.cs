@@ -63,6 +63,16 @@ namespace MvcIndexer.Holders
         /// </summary>
         public List<String> StopWords { get; set; }
 
+        /// <summary>
+        /// Custom weighting function to be run on each keyword for a given page.
+        /// </summary>
+        public Prioritize KeywordPrioritizer { get; set; }
+
+        /// <summary>
+        /// When true, use KeywordPrioritizer in addition to normal priority calculations.  
+        /// Otherwise. only use KeywordPrioritizer if it is provided and only use internal calculations if not.
+        /// </summary>
+        public Boolean UseAdditionalWeighting { get; set; }
     }
 
     /// <summary>
@@ -71,6 +81,17 @@ namespace MvcIndexer.Holders
     /// <param name="Html">Unfiltered HTML from WebRequest</param>
     /// <returns>HTML to use in index</returns>
     public delegate String HtmlFilter(String Html);
+
+    /// <summary>
+    /// Takes the url, content, title, and a keyword and returns a weighting.
+    /// </summary>
+    /// <param name="Url">Url of the page</param>
+    /// <param name="StrippedContent">Content</param>
+    /// <param name="Title"></param>
+    /// <param name="Keyword"></param>
+    /// <returns></returns>
+    public delegate Int32 Prioritize(String Url, String StrippedContent, String Title, String Keyword);
+
 
     public enum IndexType
     {
